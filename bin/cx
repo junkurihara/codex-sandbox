@@ -1,0 +1,91 @@
+#!/usr/bin/env sh
+# Attach to or create a per-repository tmux session inside the Codex container.
+set -eu
+
+CONTAINER="${CX_CONTAINER:-codex-code}"
+WORKDIR="${CX_WORKDIR:-/workspace}"
+
+usage() {
+  cat <<EOF
+Usage:
+  bin/cx <repo>          attach to or create a session for $WORKDIR/<repo>
+  bin/cx                 list active sessions and available repos
+  bin/cx -l | ls | list  list only
+  bin/cx -h | --help     show this help
+
+Env:
+  CX_CONTAINER  container name (default: codex-code)
+  CX_WORKDIR    workspace root inside the container (default: /workspace)
+  CX_SESSION    attach to an arbitrary session name at \$CX_WORKDIR
+EOF
+}
+
+list() {
+  sessions="$(docker exec "$CONTAINER" tmux ls 2>/dev/null || true)"
+
+  echo "Active sessions:"
+  if [ -n "$sessions" ]; then
+    printf '%s\n' "$sessions" | sed 's/^/  /'
+  else
+    echo "  (none)"
+  fi
+
+  echo
+  echo "Repos under $WORKDIR:"
+  repos="$(docker exec "$CONTAINER" find "$WORKDIR" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null || true)"
+  if [ -n "$repos" ]; then
+    printf '%s\n' "$repos" | sort | sed 's/^/  /'
+  else
+    echo "  (none)"
+  fi
+}
+
+case "${1:-}" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+
+if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+  echo "Container '$CONTAINER' is not running. Start it with: docker compose up -d" >&2
+  exit 1
+fi
+
+case "${1:-}" in
+  -l | ls | list)
+    list
+    exit 0
+    ;;
+esac
+
+REPO="${1:-}"
+
+if [ -n "$REPO" ]; then
+  case "$REPO" in
+    /* | *"/"* | "." | "..")
+      echo "Repo must be a single directory name under $WORKDIR." >&2
+      exit 1
+      ;;
+  esac
+
+  if ! docker exec "$CONTAINER" test -d "$WORKDIR/$REPO"; then
+    echo "Repo '$REPO' not found under $WORKDIR in container '$CONTAINER'." >&2
+    echo >&2
+    list >&2
+    exit 1
+  fi
+
+  SESSION="$(printf '%s' "$REPO" | tr '.:' '__')"
+  CWD="$WORKDIR/$REPO"
+elif [ -n "${CX_SESSION:-}" ]; then
+  SESSION="$CX_SESSION"
+  CWD="$WORKDIR"
+else
+  list
+  echo
+  echo "Attach to a repo with: bin/cx <repo>"
+  exit 0
+fi
+
+exec docker exec -it "$CONTAINER" tmux new-session -A -s "$SESSION" -c "$CWD"

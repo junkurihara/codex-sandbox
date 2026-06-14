@@ -1,0 +1,11 @@
+# Keep the build context small and free of host-side runtime data.
+.git
+.github
+.gitignore
+.dockerignore
+data
+codex-workspace
+.tmp
+.DS_Store
+*.swp
+*~

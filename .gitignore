@@ -1,0 +1,11 @@
+# Runtime bind-mount data. May contain Codex credentials/config and work files.
+data/
+codex-workspace/
+
+# Scratch/design notes.
+.tmp/
+
+# OS/editor files.
+.DS_Store
+*.swp
+*~

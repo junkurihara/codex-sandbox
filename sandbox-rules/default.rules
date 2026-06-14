@@ -1,0 +1,195 @@
+# Codex sandbox command policy.
+#
+# This file mirrors the intent of claude-code-sandbox's sandbox-settings.json:
+# forbid destructive or remote-mutating commands, prompt for broad file reads or
+# deletion, and allow routine local inspection/build/test commands.
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "forbidden",
+    justification = "Committing is reserved for the user.",
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "forbidden",
+    justification = "Pushing to remotes is reserved for the user.",
+)
+
+prefix_rule(
+    pattern = ["git", "reset"],
+    decision = "forbidden",
+    justification = "Do not rewrite or discard repository state without explicit user action.",
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "forbidden",
+    justification = "Do not delete untracked files automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "rebase"],
+    decision = "forbidden",
+    justification = "Do not rewrite branch history automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "forbidden",
+    justification = "Do not discard working-tree changes automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "restore"],
+    decision = "forbidden",
+    justification = "Do not discard working-tree changes automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "branch", ["-D", "-d"]],
+    decision = "forbidden",
+    justification = "Do not delete branches automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "tag", "-d"],
+    decision = "forbidden",
+    justification = "Do not delete tags automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "stash", ["drop", "clear"]],
+    decision = "forbidden",
+    justification = "Do not delete stash entries automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "filter-branch"],
+    decision = "forbidden",
+    justification = "Do not rewrite repository history automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "reflog", "expire"],
+    decision = "forbidden",
+    justification = "Do not prune recovery metadata automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "gc"],
+    decision = "forbidden",
+    justification = "Do not garbage-collect repository data automatically.",
+)
+
+prefix_rule(
+    pattern = ["git", "remote", ["add", "set-url"]],
+    decision = "forbidden",
+    justification = "Do not change remotes automatically.",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", ["create", "merge", "close"]],
+    decision = "forbidden",
+    justification = "Do not mutate pull requests without explicit user action.",
+)
+
+prefix_rule(
+    pattern = ["gh", "issue", ["create", "close"]],
+    decision = "forbidden",
+    justification = "Do not mutate issues without explicit user action.",
+)
+
+prefix_rule(
+    pattern = ["gh", "release"],
+    decision = "forbidden",
+    justification = "Do not create or modify releases automatically.",
+)
+
+prefix_rule(
+    pattern = ["sudo"],
+    decision = "forbidden",
+    justification = "General sudo is not available in this sandbox.",
+)
+
+prefix_rule(
+    pattern = ["rm", ["-rf", "-fr", "-r", "-R"]],
+    decision = "forbidden",
+    justification = "Do not recursively delete files automatically.",
+)
+
+prefix_rule(
+    pattern = ["chmod", "-R"],
+    decision = "forbidden",
+    justification = "Do not recursively change permissions automatically.",
+)
+
+prefix_rule(
+    pattern = ["chown"],
+    decision = "forbidden",
+    justification = "Do not change file ownership automatically.",
+)
+
+prefix_rule(
+    pattern = ["rm"],
+    decision = "prompt",
+    justification = "Confirm deletion before removing files.",
+)
+
+prefix_rule(
+    pattern = ["git", "branch"],
+    decision = "prompt",
+    justification = "Confirm branch operations unless they match a narrower allow rule.",
+)
+
+prefix_rule(
+    pattern = ["cargo", "install"],
+    decision = "prompt",
+    justification = "Confirm tool installation before modifying the user environment.",
+)
+
+prefix_rule(
+    pattern = ["npm", "install", "-g"],
+    decision = "prompt",
+    justification = "Confirm global npm installs before modifying the image environment.",
+)
+
+prefix_rule(
+    pattern = ["mv"],
+    decision = "prompt",
+    justification = "Confirm moves/renames before changing paths.",
+)
+
+prefix_rule(
+    pattern = ["cat"],
+    decision = "prompt",
+    justification = "Prefer targeted reads and avoid exposing secrets.",
+)
+
+prefix_rule(
+    pattern = ["grep"],
+    decision = "prompt",
+    justification = "Prefer rg and avoid broad searches over secret-bearing paths.",
+)
+
+prefix_rule(
+    pattern = ["find"],
+    decision = "prompt",
+    justification = "Confirm broad filesystem traversal.",
+)
+
+prefix_rule(pattern = ["git", "status"], decision = "allow")
+prefix_rule(pattern = ["git", "diff"], decision = "allow")
+prefix_rule(pattern = ["git", "log"], decision = "allow")
+prefix_rule(pattern = ["git", "show"], decision = "allow")
+prefix_rule(pattern = ["git", "add"], decision = "allow")
+prefix_rule(pattern = ["git", "switch", "-c"], decision = "allow")
+prefix_rule(pattern = ["git", "stash", "list"], decision = "allow")
+prefix_rule(pattern = ["git", "stash", "show"], decision = "allow")
+
+prefix_rule(pattern = ["cargo", ["build", "test", "fmt", "clippy", "check", "run", "new"]], decision = "allow")
+prefix_rule(pattern = ["npm", "run"], decision = "allow")
+prefix_rule(pattern = ["npm", "test"], decision = "allow")
+prefix_rule(pattern = ["mkdir"], decision = "allow")
+prefix_rule(pattern = ["ls"], decision = "allow")
+prefix_rule(pattern = ["which"], decision = "allow")

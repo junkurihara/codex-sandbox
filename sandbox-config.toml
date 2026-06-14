@@ -1,0 +1,77 @@
+# Codex sandbox defaults.
+#
+# This is the Codex-oriented counterpart to claude-code-sandbox's
+# sandbox-settings.json. Copy it to $CODEX_HOME/config.toml, or let the Docker
+# entrypoint seed it into /home/dev/.codex/config.toml on first startup.
+#
+# Command-specific allow/prompt/deny policy lives in sandbox-rules/default.rules.
+
+approval_policy = "on-request"
+default_permissions = "sandbox"
+allow_login_shell = false
+
+# Store credentials under CODEX_HOME so the bind mount persists login state.
+cli_auth_credentials_store = "file"
+mcp_oauth_credentials_store = "file"
+
+# Keep nonessential traffic low. The container firewall is still the hard
+# network boundary for the Codex process itself.
+check_for_update_on_startup = false
+web_search = "disabled"
+
+project_doc_max_bytes = 32768
+project_doc_fallback_filenames = []
+file_opener = "none"
+
+[history]
+persistence = "save-all"
+
+[shell_environment_policy]
+inherit = "all"
+ignore_default_excludes = false
+exclude = [
+  "AWS_*",
+  "AZURE_*",
+  "GCP_*",
+  "GOOGLE_*",
+  "OPENAI_API_KEY",
+  "CODEX_API_KEY",
+  "CODEX_ACCESS_TOKEN",
+  "*_TOKEN",
+  "*_SECRET",
+  "*_KEY",
+]
+set = { DEVCONTAINER = "true", CODEX_HOME = "/home/dev/.codex" }
+include_only = []
+experimental_use_profile = false
+
+[permissions.sandbox.filesystem]
+glob_scan_max_depth = 4
+":minimal" = "read"
+":tmpdir" = "write"
+":slash_tmp" = "write"
+"/home/dev/.codex" = "deny"
+"/home/dev/.ssh" = "deny"
+
+[permissions.sandbox.filesystem.":workspace_roots"]
+"." = "write"
+".env" = "deny"
+".env.*" = "deny"
+"*.env" = "deny"
+"*.env.*" = "deny"
+"**/.env" = "deny"
+"**/.env.*" = "deny"
+"**/*.pem" = "deny"
+"**/credentials*.json" = "deny"
+"id_rsa*" = "deny"
+"id_ed25519*" = "deny"
+"**/id_rsa*" = "deny"
+"**/id_ed25519*" = "deny"
+
+[permissions.sandbox.network]
+enabled = false
+
+[features]
+hooks = true
+shell_snapshot = true
+unified_exec = true

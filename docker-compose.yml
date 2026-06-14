@@ -1,0 +1,32 @@
+name: codex-sandbox
+
+services:
+  codex-code:
+    build:
+      context: .
+      args:
+        TZ: "Asia/Tokyo"
+        CODEX_VERSION: latest
+        USER_UID: "1000"
+        USER_GID: "1000"
+    image: codex-code-sandbox:local
+    container_name: codex-code
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.lifecycle.pre-update=/usr/local/bin/wt-preupdate"
+      - "com.centurylinklabs.watchtower.lifecycle.pre-update-timeout=1"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      CODEX_HOME: /home/dev/.codex
+      HISTFILE: /commandhistory/.zsh_history
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./codex-workspace:/workspace:delegated
+      - ./data/codex:/home/dev/.codex
+      - ./data/history:/commandhistory
