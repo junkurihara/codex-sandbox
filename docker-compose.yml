@@ -1,7 +1,7 @@
 name: codex-sandbox
 
 services:
-  codex-code:
+  codex:
     build:
       context: .
       args:
@@ -9,8 +9,8 @@ services:
         CODEX_VERSION: latest
         USER_UID: "1000"
         USER_GID: "1000"
-    image: codex-code-sandbox:local
-    container_name: codex-code
+    image: codex-sandbox:local
+    container_name: codex
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.lifecycle.pre-update=/usr/local/bin/wt-preupdate"

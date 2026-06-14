@@ -103,7 +103,7 @@ Do not commit `data/`. It can contain Codex credentials, including
 Environment overrides:
 
 ```sh
-CX_CONTAINER=codex-code ./bin/cx my-repo
+CX_CONTAINER=codex ./bin/cx my-repo
 CX_WORKDIR=/workspace ./bin/cx my-repo
 CX_SESSION=main ./bin/cx
 ```
@@ -211,7 +211,7 @@ The running container blocks apt mirrors and the `dev` user cannot use general
 sudo. From the host, an operator with Docker access can install temporary tools:
 
 ```sh
-docker exec -u 0 codex-code install-tools valgrind python3
+docker exec -u 0 codex install-tools valgrind python3
 ```
 
 The helper temporarily allows apt mirrors, installs the packages, and restores

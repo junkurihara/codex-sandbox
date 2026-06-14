@@ -2,7 +2,7 @@
 # Attach to or create a per-repository tmux session inside the Codex container.
 set -eu
 
-CONTAINER="${CX_CONTAINER:-codex-code}"
+CONTAINER="${CX_CONTAINER:-codex}"
 WORKDIR="${CX_WORKDIR:-/workspace}"
 
 usage() {
@@ -14,7 +14,7 @@ Usage:
   bin/cx -h | --help     show this help
 
 Env:
-  CX_CONTAINER  container name (default: codex-code)
+  CX_CONTAINER  container name (default: codex)
   CX_WORKDIR    workspace root inside the container (default: /workspace)
   CX_SESSION    attach to an arbitrary session name at \$CX_WORKDIR
 EOF
