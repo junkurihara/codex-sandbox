@@ -12,6 +12,7 @@ ENV TZ="${TZ}" \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   aggregate \
+  bubblewrap \
   build-essential \
   ca-certificates \
   curl \

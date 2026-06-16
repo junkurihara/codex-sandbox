@@ -9,6 +9,12 @@ The container itself does little after startup. It applies an egress firewall,
 seeds default Codex guidance when needed, and sleeps forever. Actual work runs
 inside tmux sessions in the container.
 
+Codex's Linux sandbox uses `bubblewrap` inside the container. OpenAI's
+sandboxing prerequisites require `bubblewrap` and support for unprivileged user
+namespace creation on Linux/WSL2. Docker's default seccomp profile blocks that
+namespace creation, so the Compose service sets `seccomp=unconfined` instead of
+running the container as `privileged`.
+
 ## Features
 
 - Non-root `dev` user by default.
@@ -16,6 +22,7 @@ inside tmux sessions in the container.
 - Host bind mounts for workspace, Codex state, and shell history.
 - Per-repository tmux sessions under `/workspace`.
 - Codex CLI installed from `@openai/codex`.
+- `bubblewrap` installed for Codex's Linux sandbox.
 - No Docker socket mount.
 - No in-container SSH daemon. Mobile SSH terminates on the Docker host, then
   `bin/cx` enters tmux inside the container.
@@ -26,8 +33,9 @@ inside tmux sessions in the container.
 - A host reachable from your mobile device over a trusted network, VPN, or SSH
   setup.
 - A Linux container runtime that supports `NET_ADMIN`, `NET_RAW`, `iptables`,
-  and `ipset`. Linux hosts are the primary target; Docker Desktop may work but
-  is not the main security boundary.
+  `ipset`, `bubblewrap`, and unprivileged user namespaces. Linux hosts are the
+  primary target; Docker Desktop may work but is not the main security
+  boundary.
 
 ## Quick Start
 
