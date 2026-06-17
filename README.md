@@ -1,31 +1,36 @@
 # Codex Sandbox
 
-A Docker-based sandbox for running Codex CLI continuously in long-lived tmux
-sessions. The intended mobile workflow is simple: SSH into the Docker host from
-iOS or Android, reattach to the tmux session with `bin/cx <repo>`, send any
-follow-up instructions, then detach again.
+A Docker-based sandbox for running Codex CLI continuously in a long-lived
+container. The primary mobile workflow is Codex Remote Connections from
+iPhone, iPad, or the macOS app. SSH and tmux remain available for starting and
+monitoring the singleton `codex remote-control` process, plus manual repository
+maintenance shells.
 
 The container itself does little after startup. It applies an egress firewall,
-seeds default Codex guidance when needed, and sleeps forever. Actual work runs
-inside tmux sessions in the container.
+seeds default Codex guidance when needed, and sleeps forever. The control tmux
+session is where you manually start `codex remote-control`; repo-specific tmux
+sessions are optional maintenance shells.
 
 Codex's Linux sandbox uses `bubblewrap` inside the container. OpenAI's
 sandboxing prerequisites require `bubblewrap` and support for unprivileged user
 namespace creation on Linux/WSL2. Docker's default seccomp profile blocks that
-namespace creation, so the Compose service sets `seccomp=unconfined` instead of
-running the container as `privileged`.
+namespace creation, and Docker's default AppArmor profile can block the mount
+operations `bubblewrap` performs during sandbox setup. The Compose service sets
+`seccomp=unconfined` and `apparmor=unconfined` instead of running the container
+as `privileged`.
 
 ## Features
 
 - Non-root `dev` user by default.
 - Docker-level egress firewall using `iptables` and `ipset`.
 - Host bind mounts for workspace, Codex state, and shell history.
-- Per-repository tmux sessions under `/workspace`.
+- A singleton control tmux session under `/workspace`.
+- Optional per-repository shell sessions under `/workspace/<repo>`.
 - Codex CLI installed from `@openai/codex`.
 - `bubblewrap` installed for Codex's Linux sandbox.
 - No Docker socket mount.
 - No in-container SSH daemon. Mobile SSH terminates on the Docker host, then
-  `bin/cx` enters tmux inside the container.
+  `./bin/cx` enters tmux inside the container when manual access is needed.
 
 ## Prerequisites
 
@@ -57,36 +62,45 @@ Clone or copy repositories under `codex-workspace`:
 git clone <repo-url> codex-workspace/my-repo
 ```
 
-Attach to a per-repository tmux session:
+Attach to the control tmux session:
+
+```sh
+./bin/cx
+```
+
+Inside tmux, sign in and start remote control:
+
+```sh
+codex login --device-auth
+codex remote-control
+```
+
+Detach from tmux with `Ctrl-Space` then `d`. Re-run `./bin/cx` to reattach
+later.
+
+For manual work in a repository shell:
 
 ```sh
 ./bin/cx my-repo
 ```
 
-Inside tmux, sign in and start Codex:
-
-```sh
-codex login --device-auth
-codex
-```
-
-Detach from tmux with `Ctrl-Space` then `d`. Re-run `./bin/cx my-repo` to
-reattach later.
-
 ## Mobile Workflow
 
-From iOS or Android:
+From iOS, iPadOS, or the macOS app, use Codex Remote Connections against the
+host/container environment. The connected host provides the project files,
+tools, credentials, sandbox policy, and approvals.
+
+For SSH fallback or maintenance:
 
 1. SSH into the Docker host over a trusted path. Prefer a VPN or private
    network. Do not expose SSH broadly without normal hardening.
 2. Change to this repository on the host.
-3. Run `./bin/cx <repo>`.
-4. Review progress, answer Codex prompts, approve actions, or add follow-up
-   instructions.
+3. Run `./bin/cx` to start or monitor `codex remote-control`.
+4. Run `./bin/cx <repo>` only when you need a repository shell.
 5. Detach with `Ctrl-Space` then `d`.
 
 The SSH connection does not need to stay open. tmux and Codex continue inside
-the container after your mobile session disconnects.
+the container after your SSH session disconnects.
 
 ## Directory Layout
 
@@ -103,9 +117,9 @@ Do not commit `data/`. It can contain Codex credentials, including
 ## tmux Wrapper
 
 ```sh
-./bin/cx            # list active sessions and available repos
-./bin/cx my-repo    # attach to /workspace/my-repo
-./bin/cx -l         # list only
+./bin/cx            # attach to /workspace control session
+./bin/cx my-repo    # attach to /workspace/my-repo shell session
+./bin/cx -l         # list sessions and available repos
 ```
 
 Environment overrides:
@@ -113,10 +127,11 @@ Environment overrides:
 ```sh
 CX_CONTAINER=codex ./bin/cx my-repo
 CX_WORKDIR=/workspace ./bin/cx my-repo
-CX_SESSION=main ./bin/cx
+CX_CONTROL_SESSION=main ./bin/cx
 ```
 
-Session names are derived from repository directory names. `.` and `:` are
+The control session defaults to `codex-control`. Repo shell session names use
+the `repo-` prefix plus the repository directory name. `.` and `:` are
 sanitized to `_` for tmux only; the working directory remains the exact repo
 path.
 

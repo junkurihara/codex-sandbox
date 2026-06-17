@@ -12,10 +12,11 @@ services:
     image: codex-sandbox:local
     container_name: codex
     restart: unless-stopped
-    # Docker's default seccomp profile blocks unprivileged user namespace
-    # creation, which Codex's bubblewrap sandbox needs.
+    # Docker's default seccomp and AppArmor profiles block namespace and mount
+    # operations that Codex's bubblewrap sandbox needs.
     security_opt:
       - seccomp=unconfined
+      - apparmor=unconfined
     labels:
       - "com.centurylinklabs.watchtower.lifecycle.pre-update=/usr/local/bin/wt-preupdate"
       - "com.centurylinklabs.watchtower.lifecycle.pre-update-timeout=1"

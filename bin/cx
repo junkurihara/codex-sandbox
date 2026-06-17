@@ -1,32 +1,96 @@
 #!/usr/bin/env sh
-# Attach to or create a per-repository tmux session inside the Codex container.
+# Attach to the Codex control tmux session or a repository shell session.
 set -eu
 
 CONTAINER="${CX_CONTAINER:-codex}"
 WORKDIR="${CX_WORKDIR:-/workspace}"
+CONTROL_SESSION="${CX_SESSION:-${CX_CONTROL_SESSION:-codex-control}}"
+REPO_SESSION_PREFIX="${CX_REPO_SESSION_PREFIX:-repo-}"
+PROGRAM="$0"
 
 usage() {
   cat <<EOF
 Usage:
-  bin/cx <repo>          attach to or create a session for $WORKDIR/<repo>
-  bin/cx                 list active sessions and available repos
-  bin/cx -l | ls | list  list only
-  bin/cx -h | --help     show this help
+  $PROGRAM                 attach to or create the control session at $WORKDIR
+  $PROGRAM <repo>          attach to or create a repo shell at $WORKDIR/<repo>
+  $PROGRAM -l | ls | list  list sessions and available repos
+  $PROGRAM -h | --help     show this help
 
 Env:
-  CX_CONTAINER  container name (default: codex)
-  CX_WORKDIR    workspace root inside the container (default: /workspace)
-  CX_SESSION    attach to an arbitrary session name at \$CX_WORKDIR
+  CX_CONTAINER           container name (default: codex)
+  CX_WORKDIR             workspace root inside the container (default: /workspace)
+  CX_CONTROL_SESSION     control session name (default: codex-control)
+  CX_REPO_SESSION_PREFIX repo session prefix (default: repo-)
+  CX_SESSION             legacy alias for CX_CONTROL_SESSION
 EOF
 }
 
-list() {
-  sessions="$(docker exec "$CONTAINER" tmux ls 2>/dev/null || true)"
+tmux_has_session() {
+  docker exec "$CONTAINER" tmux has-session -t "$1" >/dev/null 2>&1
+}
 
-  echo "Active sessions:"
-  if [ -n "$sessions" ]; then
-    printf '%s\n' "$sessions" | sed 's/^/  /'
+session_status() {
+  attached="$(docker exec "$CONTAINER" tmux display-message -p -t "$1" '#{session_attached}' 2>/dev/null || printf '0')"
+  if [ "$attached" = "0" ]; then
+    printf 'detached'
+  elif [ "$attached" = "1" ]; then
+    printf 'attached'
   else
+    printf 'attached (%s clients)' "$attached"
+  fi
+}
+
+session_cwd() {
+  docker exec "$CONTAINER" tmux display-message -p -t "$1" '#{pane_current_path}' 2>/dev/null || printf '?'
+}
+
+print_session() {
+  session="$1"
+  printf '  %s: %s, cwd=%s\n' "$session" "$(session_status "$session")" "$(session_cwd "$session")"
+}
+
+list() {
+  sessions="$(docker exec "$CONTAINER" tmux list-sessions -F '#S' 2>/dev/null || true)"
+
+  echo "Control session:"
+  if tmux_has_session "$CONTROL_SESSION"; then
+    print_session "$CONTROL_SESSION"
+  else
+    echo "  (none)"
+  fi
+
+  echo
+  echo "Repo sessions:"
+  found_repo_session=0
+  if [ -n "$sessions" ]; then
+    for session in $sessions; do
+      case "$session" in
+        "$REPO_SESSION_PREFIX"*)
+          print_session "$session"
+          found_repo_session=1
+          ;;
+      esac
+    done
+  fi
+  if [ "$found_repo_session" -eq 0 ]; then
+    echo "  (none)"
+  fi
+
+  echo
+  echo "Other sessions:"
+  found_other_session=0
+  if [ -n "$sessions" ]; then
+    for session in $sessions; do
+      case "$session" in
+        "$CONTROL_SESSION" | "$REPO_SESSION_PREFIX"*) ;;
+        *)
+          print_session "$session"
+          found_other_session=1
+          ;;
+      esac
+    done
+  fi
+  if [ "$found_other_session" -eq 0 ]; then
     echo "  (none)"
   fi
 
@@ -61,7 +125,15 @@ esac
 
 REPO="${1:-}"
 
-if [ -n "$REPO" ]; then
+if [ -z "$REPO" ]; then
+  if ! docker exec "$CONTAINER" test -d "$WORKDIR"; then
+    echo "Workspace root '$WORKDIR' not found in container '$CONTAINER'." >&2
+    exit 1
+  fi
+
+  SESSION="$CONTROL_SESSION"
+  CWD="$WORKDIR"
+else
   case "$REPO" in
     /* | *"/"* | "." | "..")
       echo "Repo must be a single directory name under $WORKDIR." >&2
@@ -76,16 +148,8 @@ if [ -n "$REPO" ]; then
     exit 1
   fi
 
-  SESSION="$(printf '%s' "$REPO" | tr '.:' '__')"
+  SESSION="${REPO_SESSION_PREFIX}$(printf '%s' "$REPO" | tr '.:' '__')"
   CWD="$WORKDIR/$REPO"
-elif [ -n "${CX_SESSION:-}" ]; then
-  SESSION="$CX_SESSION"
-  CWD="$WORKDIR"
-else
-  list
-  echo
-  echo "Attach to a repo with: bin/cx <repo>"
-  exit 0
 fi
 
 exec docker exec -it "$CONTAINER" tmux new-session -A -s "$SESSION" -c "$CWD"
