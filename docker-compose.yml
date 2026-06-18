@@ -12,6 +12,7 @@ services:
     image: codex-sandbox:local
     container_name: codex
     restart: unless-stopped
+    init: true
     # Docker's default seccomp and AppArmor profiles block namespace and mount
     # operations that Codex's bubblewrap sandbox needs.
     security_opt:

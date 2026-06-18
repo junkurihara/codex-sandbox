@@ -24,6 +24,7 @@ as `privileged`.
 - Non-root `dev` user by default.
 - Docker-level egress firewall using `iptables` and `ipset`.
 - Host bind mounts for workspace, Codex state, and shell history.
+- Docker's built-in init enabled to reap orphaned child processes.
 - A singleton control tmux session under `/workspace`.
 - Optional per-repository shell sessions under `/workspace/<repo>`.
 - Codex CLI installed from `@openai/codex`.
