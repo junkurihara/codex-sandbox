@@ -72,7 +72,7 @@ glob_scan_max_depth = 4
 "**/id_ed25519*" = "deny"
 
 [permissions.sandbox.network]
-enabled = false
+enabled = true
 
 [features]
 hooks = true
